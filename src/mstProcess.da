@@ -1,0 +1,52 @@
+import sys
+
+class Edge:
+  def __init__(self, weight, to, state):
+    self.weight = weight
+    self.to = to
+    self.state = state # ["basic", "branch", "reject"]
+
+class MSTProcess(process):
+  def setup(id, listOfProcesses, graphInfo):
+    self.listOfProcesses = listOfProcesses
+    self.edges = {}
+    self.my_id = id
+    iterator =iter(graphInfo.split(" "))
+    for edge in iterator:
+      self.edges[int(edge)] = Edge(int(next(iterator)), int(edge), "basic")
+
+    self.level = 0
+    self.state = "sleeping" # ["find", "found", "sleeping"]
+    self.find_count = 0
+    self.fragm_id = -1
+    self.best_node = -1
+    self.best_wt = -1
+    self.test_node = -1
+    self.in_branch_node = -1
+
+
+  def run():
+    output(self.edges)
+
+def main():
+  if len(sys.argv) < 2:
+    output("filename missing in command")
+    sys.exit(1)
+
+  filename = sys.argv[1]
+  f = open(filename, "r")
+  nproc = int(f.readline())
+
+  config(clock='Lamport')
+
+  topology = list(new(MSTProcess, num=nproc))
+  listOfProcesses = {}
+
+  for i, p in enumerate(topology):
+    listOfProcesses[i] = p
+
+  for i, p in enumerate(topology):
+    setup(p, (i, listOfProcesses, f.readline())) # "1 2 3 4"
+
+  start(topology)
+
