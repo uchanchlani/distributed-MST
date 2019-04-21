@@ -187,7 +187,7 @@ class MSTProcess(process):
     elif best_wt > self.best_wt:
       change_root()
     elif best_wt == self.best_wt and self.best_wt == INFINITY:
-      halt()
+      halt(recv_id)
 
 
   # 11
@@ -207,8 +207,17 @@ class MSTProcess(process):
     check_queue()
 
   # additional
-  def halt():
+  def halt(recv_id):
     self.terminate = True
+    for i in self.edges:
+      if i == recv_id or self.edges[i].state != "branch":
+        continue
+      send(("halt", self.my_id), to=self.listOfProcesses[i])
+
+
+  # additional.1
+  def receive(msg= ("halt", recv_id)):
+    halt(recv_id)
 
 
   # 12
@@ -243,6 +252,7 @@ class MSTProcess(process):
   def run():
     wakeup()
     await(self.terminate)
+    # check_queue()
     output("Terminated ", self.my_id)
     output(self.edges)
 
