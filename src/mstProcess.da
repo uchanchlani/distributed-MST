@@ -1,10 +1,19 @@
 import sys
 
+INFINITY = 9999999999999999999999999
+
 class Edge:
   def __init__(self, weight, to, state):
     self.weight = weight
     self.to = to
     self.state = state # ["basic", "branch", "reject"]
+
+  def __repr__(self):
+    return self.__str__()
+
+  def __str__(self):
+    # return "asdfasdfa"
+    return "{} -> {} -> {}".format(self.to, self.weight, self.state)
 
 class MSTProcess(process):
   def setup(id, listOfProcesses, graphInfo):
@@ -12,21 +21,208 @@ class MSTProcess(process):
     self.edges = {}
     self.my_id = id
     iterator =iter(graphInfo.split(" "))
-    for edge in iterator:
-      self.edges[int(edge)] = Edge(int(next(iterator)), int(edge), "basic")
+    for val in iterator:
+      # int(val) is the proc id, and next(iterator) is the edge value
+      self.edges[int(val)] = Edge(int(next(iterator)), int(val), "basic")
 
     self.level = 0
     self.state = "sleeping" # ["find", "found", "sleeping"]
     self.find_count = 0
     self.fragm_id = -1
-    self.best_node = -1
+    self.best_edge = None
     self.best_wt = -1
-    self.test_node = -1
+    self.test_edge = None
     self.in_branch_node = -1
+    self.terminate = False
+    self.queue = []
+
+
+  def get_min_edge():
+    a = None
+    for edge in self.edges:
+      if self.edges[edge].state != "basic":
+        continue
+
+      if a == None :
+        a = self.edges[edge]
+      elif a.weight > self.edges[edge].weight:
+        a = self.edges[edge]
+
+    return a
+
+  # 2
+  def wakeup():
+    if self.state == "sleeping":
+      a = get_min_edge()
+      self.edges[a.to].state = "branch"
+      # self.level = 0
+      self.state = "found"
+      # self.find_count = 0
+      send(("connect", 0, self.my_id), to=self.listOfProcesses[a.to])
+
+  # 3
+  def receive(msg= ("connect", level, recv_id)):
+    check_queue()
+    rcv_connect(level, recv_id)
+
+
+  # 3.1
+  def rcv_connect(level, recv_id):
+    wakeup()
+    if level < self.level:
+      self.edges[recv_id].state = "branch"
+      send(("initiate", self.level, self.fragm_id, self.state, self.my_id), to=self.listOfProcesses[recv_id])
+      if self.state == "find":
+        self.find_count += 1
+    elif self.edges[recv_id].state == "basic":
+      self.queue.append({"msg": "connect", "level" : level, "recv_id" : recv_id})
+    else:
+      send(("initiate", self.level + 1, self.edges[recv_id].weight, "find", self.my_id), to=self.listOfProcesses[recv_id])
+
+
+  # 4
+  def receive(msg= ("initiate", level, fragm_id, state, recv_id)):
+    check_queue()
+    self.level = level
+    self.fragm_id = fragm_id
+    self.state = state
+    self.in_branch_node = recv_id
+    self.best_edge = None
+    self.best_wt = INFINITY
+    for proc in self.edges:
+      if self.edges[proc].to == recv_id or self.edges[proc].state != "branch":
+        continue
+      send(("initiate", self.level, self.fragm_id, self.state, self.my_id), to=self.listOfProcesses[proc])
+      if self.state == "find":
+        self.find_count += 1
+
+    if self.state == "find":
+      test()
+
+
+  # 5
+  def test():
+    self.test_edge = get_min_edge()
+    if self.test_edge != None:
+      send(("test", self.level, self.fragm_id, self.my_id), to=self.listOfProcesses[test_edge.to])
+    else:
+      self.test_edge = None
+      report()
+
+
+  # 6
+  def receive(msg= ("test", level, fragm_id, recv_id)):
+    check_queue()
+    rcv_test(level, fragm_id, recv_id)
+
+
+  # 6.1
+  def rcv_test(level, fragm_id, recv_id):
+    wakeup()
+    if level > self.level:
+      self.queue.append({"msg": "test", "level" : level, "fragm_id": fragm_id, "recv_id" : recv_id})
+    elif fragm_id != self.fragm_id:
+      send(("accept", self.my_id), to=self.listOfProcesses[recv_id])
+    else:
+      if self.edges[recv_id].state == "basic":
+        self.edges[recv_id].state = "reject"
+
+      if self.test_edge.to != recv_id:
+        send(("reject", self.my_id), to=self.listOfProcesses[recv_id])
+      else:
+        test()
+
+  # 7
+  def receive(msg= ("accept", recv_id)):
+    check_queue()
+    self.test_edge = None
+    if self.edges[recv_id].weight < self.best_wt:
+      self.best_wt = self.edges[recv_id].weight
+      self.best_edge = self.edges[recv_id]
+
+    report()
+
+  # 8
+  def receive(msg= ("reject", recv_id)):
+    if self.edges[recv_id].state == "basic":
+      self.edges[recv_id].state == "reject"
+    test()
+
+
+  # 9
+  def report():
+    if self.find_count == 0 and self.test_edge == None:
+      self.state = "found"
+      send(("report", self.best_wt, self.my_id), to=self.listOfProcesses[self.in_branch_node])
+
+
+  # 10
+  def receive(msg= ("report", best_wt, recv_id)):
+    check_queue()
+    rcv_report(best_wt, recv_id)
+
+
+  # 10
+  def rcv_report(best_wt, recv_id):
+    if recv_id != self.in_branch_node:
+      self.find_count -= 1
+      if best_wt < self.best_wt:
+        self.best_wt = best_wt
+        self.best_edge = self.edges[recv_id]
+      report()
+    elif self.state == "find":
+      self.queue.append({"msg": "report", "best_wt" : best_wt, "recv_id" : recv_id})
+    elif best_wt > self.best_wt:
+      change_root()
+    elif best_wt == self.best_wt and self.best_wt == INFINITY:
+      halt()
+
+
+  # 11
+  def change_root():
+    if self.best_edge.state == "branch":
+      send(("change_root", self.my_id), to=self.listOfProcesses[self.best_edge.to])
+    else:
+      send(("connect", self.level, self.my_id), to=self.listOfProcesses[self.best_edge.to])
+      self.best_edge.state = "branch"
+      self.edges[self.best_edge.to].state = "branch"
+
+
+  # 12
+  def receive(msg= ("change_root", recv_id)):
+    check_queue()
+    change_root()
+
+  # additional
+  def halt():
+    self.terminate = True
+
+
+  # additional
+  def check_queue():
+    queue = []
+    for i in self.queue:
+      queue.append(self.queue[i])
+
+    self.queue = []
+
+    for i in queue:
+      a = queue[i]
+      if a["msg"] == "report":
+        rcv_report(a["best_wt"], a["recv_id"])
+      elif a["msg"] == "connect":
+        rcv_connect(a["level"], a["recv_id"])
+      elif a["msg"] == "test":
+        rcv_connect(a["level"], a["fragm_id"], a["recv_id"])
+
 
 
   def run():
+    wakeup()
+    await(self.terminate)
     output(self.edges)
+
+
 
 def main():
   if len(sys.argv) < 2:
