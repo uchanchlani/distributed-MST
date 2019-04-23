@@ -63,7 +63,7 @@ class MSTProcess(process):
 
   # 3
   def receive(msg= ("connect", level, recv_id)):
-    output("RECEIVED CONNECT ", self.my_id, " from ", recv_id)
+    # output("RECEIVED CONNECT ", self.my_id, " from ", recv_id)
     rcv_connect(level, recv_id)
     check_queue()
 
@@ -84,7 +84,7 @@ class MSTProcess(process):
 
   # 4
   def receive(msg= ("initiate", level, fragm_id, state, recv_id)):
-    output("RECEIVED INITIATE ", self.my_id, " from ", recv_id)
+    # output("RECEIVED INITIATE ", self.my_id, " from ", recv_id)
     self.level = level
     self.fragm_id = fragm_id
     self.state = state
@@ -117,7 +117,7 @@ class MSTProcess(process):
 
   # 6
   def receive(msg= ("test", level, fragm_id, recv_id)):
-    output("RECEIVED TEST ", self.my_id, " from ", recv_id)
+    # output("RECEIVED TEST ", self.my_id, " from ", recv_id)
     rcv_test(level, fragm_id, recv_id)
     check_queue()
 
@@ -125,7 +125,7 @@ class MSTProcess(process):
   # 6.1
   def rcv_test(level, fragm_id, recv_id):
     wakeup()
-    output("level ", level, " self.level ", self.level, " asdf ", self.my_id, " from ", recv_id)
+    # output("level ", level, " self.level ", self.level, " asdf ", self.my_id, " from ", recv_id)
     if level > self.level:
       self.queue.append({"msg": "test", "level" : level, "fragm_id": fragm_id, "recv_id" : recv_id})
     elif fragm_id != self.fragm_id:
@@ -141,7 +141,7 @@ class MSTProcess(process):
 
   # 7
   def receive(msg= ("accept", recv_id)):
-    output("RECEIVED ACCEPT ", self.my_id, " from ", recv_id)
+    # output("RECEIVED ACCEPT ", self.my_id, " from ", recv_id)
     self.test_edge = None
     if self.edges[recv_id].weight < self.best_wt:
       self.best_wt = self.edges[recv_id].weight
@@ -152,7 +152,7 @@ class MSTProcess(process):
 
   # 8
   def receive(msg= ("reject", recv_id)):
-    output("RECEIVED REJECt ", self.my_id, " from ", recv_id)
+    # output("RECEIVED REJECt ", self.my_id, " from ", recv_id)
     if self.edges[recv_id].state == "basic":
       self.edges[recv_id].state = "reject"
     test()
@@ -161,7 +161,7 @@ class MSTProcess(process):
 
   # 9
   def report():
-    output("RECEIVED REPORT ", self.my_id)
+    # output("RECEIVED REPORT ", self.my_id)
     if self.find_count == 0 and self.test_edge == None:
       self.state = "found"
       send(("report", self.best_wt, self.my_id), to=self.listOfProcesses[self.in_branch_node])
@@ -169,7 +169,7 @@ class MSTProcess(process):
 
   # 10
   def receive(msg= ("report", best_wt, recv_id)):
-    output("RECEIVED REPORT ", self.my_id, " from ", recv_id)
+    # output("RECEIVED REPORT ", self.my_id, " from ", recv_id)
     rcv_report(best_wt, recv_id)
     check_queue()
 
@@ -202,7 +202,7 @@ class MSTProcess(process):
 
   # 12
   def receive(msg= ("change_root", recv_id)):
-    output("RECEIVED CHANG ROOT ", self.my_id, " from ", recv_id)
+    # output("RECEIVED CHANG ROOT ", self.my_id, " from ", recv_id)
     change_root()
     check_queue()
 
@@ -253,8 +253,8 @@ class MSTProcess(process):
     wakeup()
     await(self.terminate)
     # check_queue()
-    output("Terminated ", self.my_id)
-    output(self.edges)
+    # output("Terminated ", self.my_id)
+    output("Node: ", self.my_id, " Branch edges states = ",  {k:v for (k,v) in self.edges.items() if v.state != 'reject'})
 
 
 
