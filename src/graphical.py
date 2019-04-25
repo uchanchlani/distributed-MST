@@ -1,5 +1,6 @@
 import sys
 import graphviz
+from subprocess import call
 
 STATE_LABEL = "CHANGE_STATE"
 MSG_LABEL = "TERMINATED"
@@ -12,13 +13,13 @@ class Edge:
         self.color = color
 
 class Graph:
-    def __init__(self, input_file):
+    def __init__(self, input_file, out_dir=None):
         f = open(input_file, "r")
         self.n = int(f.readline())
-        self.out_dir = str(self.n)
+        self.out_dir = out_dir
         self.edges = []
         for i in range(0,self.n):
-            node_info = f.readline()
+            node_info = f.readline().strip()
             iterator = iter(node_info.split(" "))
             for to in iterator:
                 wt = int(next(iterator))
@@ -35,7 +36,7 @@ class Graph:
         for edge in self.edges:
             g.edge(str(edge.src), str(edge.dest), str(edge.weight), color=edge.color)
 
-        g.save(directory=self.out_dir)
+        g.render(directory=self.out_dir, cleanup=True, view=False)
 
 
     def change_color(self, src, dest, color):
@@ -68,11 +69,12 @@ class ChangesStash:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print("Input output file missing")
+    if len(sys.argv) < 4:
+        print("Input output and out directory file missing")
         sys.exit(1)
 
-    g = Graph(sys.argv[1])
+    dir_name = sys.argv[3]
+    g = Graph(sys.argv[1], dir_name)
     iter = 0
     g.print_graph("%03d"%iter)
     iter = iter + 1
@@ -96,4 +98,9 @@ if __name__ == '__main__':
             elif line.find(MSG_LABEL) > 0:
                 count_msg += int(line[line.find(MSG_LABEL) + len(MSG_LABEL) + 1:])
 
-    print("Total Messages", (count_msg/2))
+    cmd = [ 'convert' ]
+    for i in range(0, iter):
+        cmd.extend(( '-delay', str( 50 ), "%s/%03d.png"%(dir_name, i)))
+    cmd.append("%s/output.gif"%dir_name)
+    call(cmd)
+    print("Total Messages", int(count_msg/2))

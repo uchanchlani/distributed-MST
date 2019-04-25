@@ -1,12 +1,8 @@
 
-# coding: utf-8
-
-# ## Generate graph
-
-# In[29]:
 
 
 from random import randint
+import sys
 
 # V = input()
 # E = input()
@@ -50,7 +46,7 @@ def generate_graph(V,E):
         del weight_pool[w_ind]
         
     # write graph to file
-    grp_file = f'graph_{V}_{E}'
+    grp_file = f'graph_{V}_{E}_input'
     f_writer = open(grp_file, 'w')
     f_writer.write(f'{str(V)}\n')
     for v in range(0,V):
@@ -60,6 +56,12 @@ def generate_graph(V,E):
     f_writer.close()
 
 
-# ## write graph to file
+if __name__ == '__main__':
+    if len(sys.argv) < 3:
+        print("V and E missing")
+        sys.exit(1)
 
-# In[30]:
+    V = int(sys.argv[1])
+    E = int(sys.argv[2])
+    generate_graph(V, E)
+

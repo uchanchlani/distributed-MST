@@ -1,5 +1,4 @@
 import sys
-import time
 
 INFINITY = 9999999999999999999999999
 
@@ -291,7 +290,7 @@ def main():
     listOfProcesses[i] = p
 
   for i, p in enumerate(topology):
-    setup(p, (i, listOfProcesses, f.readline())) # "1 2 3 4"
+    setup(p, (i, listOfProcesses, f.readline().strip())) # "1 2 3 4"
 
   start(topology)
 
