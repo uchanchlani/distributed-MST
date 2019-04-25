@@ -36,6 +36,7 @@ class MSTProcess(process):
     self.in_branch_node = -1
     self.terminate = False
     self.queue = []
+    self.msgCount = 0
 
 
   def get_min_edge():
@@ -55,10 +56,12 @@ class MSTProcess(process):
   def wakeup():
     if self.state == "sleeping":
       a = get_min_edge()
+      output("CHANGE_STATE", self.my_id, a.to)
       self.edges[a.to].state = "branch"
       # self.level = 0
       self.state = "found"
       # self.find_count = 0
+      self.msgCount += 1
       send(("connect", self.level, self.my_id), to=self.listOfProcesses[a.to])
 
   # 3
@@ -72,13 +75,16 @@ class MSTProcess(process):
   def rcv_connect(level, recv_id):
     wakeup()
     if level < self.level:
+      output("CHANGE_STATE", self.my_id, recv_id)
       self.edges[recv_id].state = "branch"
+      self.msgCount += 1
       send(("initiate", self.level, self.fragm_id, self.state, self.my_id), to=self.listOfProcesses[recv_id])
       if self.state == "find":
         self.find_count += 1
     elif self.edges[recv_id].state == "basic":
       self.queue.append({"msg": "connect", "level" : level, "recv_id" : recv_id})
     else:
+      self.msgCount += 1
       send(("initiate", self.level + 1, self.edges[recv_id].weight, "find", self.my_id), to=self.listOfProcesses[recv_id])
 
 
@@ -92,9 +98,10 @@ class MSTProcess(process):
     self.best_edge = None
     self.best_wt = INFINITY
     for proc in self.edges:
-      # output("proc ", proc)
+      # # output("proc ", proc)
       if self.edges[proc].to == recv_id or self.edges[proc].state != "branch":
         continue
+      self.msgCount += 1
       send(("initiate", self.level, self.fragm_id, self.state, self.my_id), to=self.listOfProcesses[proc])
       if self.state == "find":
         self.find_count += 1
@@ -108,6 +115,7 @@ class MSTProcess(process):
   def test():
     self.test_edge = get_min_edge()
     if self.test_edge != None:
+      self.msgCount += 1
       send(("test", self.level, self.fragm_id, self.my_id), to=self.listOfProcesses[test_edge.to])
     else:
       # self.test_edge = None
@@ -129,12 +137,14 @@ class MSTProcess(process):
     if level > self.level:
       self.queue.append({"msg": "test", "level" : level, "fragm_id": fragm_id, "recv_id" : recv_id})
     elif fragm_id != self.fragm_id:
+      self.msgCount += 1
       send(("accept", self.my_id), to=self.listOfProcesses[recv_id])
     else:
       if self.edges[recv_id].state == "basic":
         self.edges[recv_id].state = "reject"
 
       if self.test_edge == None or self.test_edge.to != recv_id:
+        self.msgCount += 1
         send(("reject", self.my_id), to=self.listOfProcesses[recv_id])
       else:
         test()
@@ -164,6 +174,7 @@ class MSTProcess(process):
     # output("RECEIVED REPORT ", self.my_id)
     if self.find_count == 0 and self.test_edge == None:
       self.state = "found"
+      self.msgCount += 1
       send(("report", self.best_wt, self.my_id), to=self.listOfProcesses[self.in_branch_node])
 
 
@@ -193,10 +204,13 @@ class MSTProcess(process):
   # 11
   def change_root():
     if self.best_edge.state == "branch":
+      self.msgCount += 1
       send(("change_root", self.my_id), to=self.listOfProcesses[self.best_edge.to])
     else:
+      self.msgCount += 1
       send(("connect", self.level, self.my_id), to=self.listOfProcesses[self.best_edge.to])
       self.best_edge.state = "branch"
+      output("CHANGE_STATE", self.my_id, self.best_edge.to)
       self.edges[self.best_edge.to].state = "branch"
 
 
@@ -212,6 +226,7 @@ class MSTProcess(process):
     for i in self.edges:
       if i == recv_id or self.edges[i].state != "branch":
         continue
+      self.msgCount += 1
       send(("halt", self.my_id), to=self.listOfProcesses[i])
 
 
@@ -222,7 +237,7 @@ class MSTProcess(process):
 
   # 12
   def receive(msg= ("check_queue", recv_id)):
-    # output("check queue for ", self.my_id, " adsf ", self.edges)
+    # # output("check queue for ", self.my_id, " adsf ", self.edges)
     check_queue()
 
 
@@ -230,13 +245,13 @@ class MSTProcess(process):
   # additional
   def check_queue():
     # return
-    # output("CHECK QUEUE ", self.my_id, " asdfadsf ", self.queue)
+    # # output("CHECK QUEUE ", self.my_id, " asdfadsf ", self.queue)
     temp_queue = []
     for i in self.queue:
       temp_queue.append(i)
 
     self.queue = []
-    # output("CHECK QUEUE ", self.my_id, " asdfadsfaaaa ", temp_queue)
+    # # output("CHECK QUEUE ", self.my_id, " asdfadsfaaaa ", temp_queue)
 
     for queue_elem in temp_queue:
       if queue_elem["msg"] == "report":
@@ -253,14 +268,14 @@ class MSTProcess(process):
     wakeup()
     await(self.terminate)
     # check_queue()
-    # output("Terminated ", self.my_id)
-    output("Node: ", self.my_id, " Branch edges states = ",  {k:v for (k,v) in self.edges.items() if v.state != 'reject'})
+    output("TERMINATED", self.msgCount)
+    # output(self.edges)
 
 
 
 def main():
   if len(sys.argv) < 2:
-    output("filename missing in command")
+    # output("filename missing in command")
     sys.exit(1)
 
   filename = sys.argv[1]
