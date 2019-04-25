@@ -63,10 +63,3 @@ def generate_graph(V,E):
 # ## write graph to file
 
 # In[30]:
-
-
-
-
-generate_graph(6,10)
-print('Done.')
-
