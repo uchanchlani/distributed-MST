@@ -2,21 +2,19 @@
 # coding: utf-8
 
 # ## Generate graph
-
-# In[29]:
-
-
 from random import randint
+import math
 
 # V = input()
 # E = input()
 def generate_graph(V,E):
     print(f'generating graph with vertices: {V} and edges: {E}')
-    weight_pool = [x for x in range(1, E+1)]
+    weight_pool = generate_weight_pool(E)
     # print(f'weight pool: {weight_pool}')
 
     graph = {}
     nodes = [0]
+    len_edges = 0
 
     # Picks a random node from previous nodes and connects to it.
     # Picks up a random index from weight_pool and chooses as the weight of 
@@ -34,9 +32,11 @@ def generate_graph(V,E):
         graph[pv][v] = weight_pool[w_ind]
         # print(f'{v} -> {pv}: {weight_pool[w_ind]}')
         del weight_pool[w_ind]
+        len_edges += 1
 
     # print('Generate extra edges')
-    while len(weight_pool) != 0:
+    # restricting number of edges to fully connected graph
+    while len_edges < min(E, V*(V-1)/2):
         u_ind = v_ind = 0
         while u_ind == v_ind or nodes[v_ind] in graph[nodes[u_ind]]:
             u_ind = randint(0, len(nodes)-1)
@@ -48,6 +48,9 @@ def generate_graph(V,E):
         graph[v][u] = weight_pool[w_ind]
         # print(f'{v} -> {u}: {weight_pool[w_ind]}')
         del weight_pool[w_ind]
+        len_edges += 1
+
+    # print(f'Graph: \n{graph}')
         
     # write graph to file
     grp_file = f'graph_{V}_{E}'
@@ -60,6 +63,8 @@ def generate_graph(V,E):
     f_writer.close()
 
 
-# ## write graph to file
-
-# In[30]:
+def generate_weight_pool(E):
+    start = randint(1, 300)
+    end = start + randint(5, 10)*E
+    weight_pool = [x for x in range(start, end)]
+    return weight_pool
