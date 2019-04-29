@@ -3,6 +3,7 @@ import graphviz
 from subprocess import call
 
 STATE_LABEL = "CHANGE_STATE"
+LEVEL_LABEL = "CHANGE_LEVEL"
 MSG_LABEL = "TERMINATED"
 
 class Edge:
@@ -18,7 +19,9 @@ class Graph:
         self.n = int(f.readline())
         self.out_dir = out_dir
         self.edges = []
+        self.levels = {}
         for i in range(0,self.n):
+            self.levels[i] = 0
             node_info = f.readline().strip()
             iterator = iter(node_info.split(" "))
             for to in iterator:
@@ -31,7 +34,7 @@ class Graph:
     def print_graph(self, file_name):
         g = graphviz.Graph(format='png', filename=file_name)
         for i in range(0,self.n):
-            g.node(str(i), str(i))
+            g.node(str(i), str(self.levels[i]))
 
         for edge in self.edges:
             g.edge(str(edge.src), str(edge.dest), str(edge.weight), color=edge.color)
@@ -47,6 +50,8 @@ class Graph:
                 edge.color = color
                 return
 
+    def change_level(self, node, level):
+        self.levels[node] = level
 
 class ChangesStash:
     def __init__(self, n):
@@ -95,8 +100,17 @@ if __name__ == '__main__':
                 else:
                     changes.push(src, dest)
 
+            if line.find(LEVEL_LABEL) > 0:
+                subline = line[line.find(LEVEL_LABEL) + len(LEVEL_LABEL) + 1:]
+                node = int(subline.split(" ")[0])
+                level = int(subline.split(" ")[1])
+                g.change_level(node, level)
+
             elif line.find(MSG_LABEL) > 0:
                 count_msg += int(line[line.find(MSG_LABEL) + len(MSG_LABEL) + 1:])
+
+        g.print_graph("%03d"%iter)
+
 
     cmd = [ 'convert' ]
     for i in range(0, iter):

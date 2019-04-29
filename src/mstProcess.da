@@ -91,6 +91,7 @@ class MSTProcess(process):
   def receive(msg= ("initiate", level, fragm_id, state, recv_id)):
     # output("RECEIVED INITIATE ", self.my_id, " from ", recv_id)
     self.level = level
+    output("CHANGE_LEVEL", self.my_id, self.level)
     self.fragm_id = fragm_id
     self.state = state
     self.in_branch_node = recv_id
